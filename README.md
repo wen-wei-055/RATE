@@ -35,9 +35,10 @@ The training process follows a specific two-stage workflow to effectively integr
 
 ## Data Preparation & Setup
 
-### 1. Format Conversion & Splitting
-* **Conversion**: Use `japan.py` (for KiK-net) or appropriate scripts for CWASN to convert raw data into **HDF5** format.
-* **Splitting**: Partition data into `train`, `val`, and `test` sets (e.g., Japan dataset uses a 60:10:30 ratio).
+### 1. Dataset Generation (TEAM Methodology)
+Our data preprocessing pipeline follows the standards established by the **TEAM** (Transformer Earthquake Alerting Model) paper.
+* **Format Conversion**: Use `japan.py` (consistent with the [TEAM implementation](https://github.com/yetinam/TEAM)) to convert raw seismic waveforms into **HDF5** format.
+* **Data Splitting**: Partition the dataset into **train**, **val**, and **test** sets (e.g., using a 60:10:30 ratio) following the same protocols for fair comparison.
 
 ### 2. Metadata & Database Initialization
 * **Generate `station.json`**: Define station coordinates and IDs used for positional encoding.
