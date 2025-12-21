@@ -61,9 +61,13 @@ The training process follows a specific two-stage workflow to effectively integr
 If you use this code or research in your work, please cite:
 
 ```bibtex
-@article{lin2025rate,
-  title={RATE: A Retrieval-Augmented Transformer for Regional Earthquake Early Warning},
+@ARTICLE{11124201,
   author={Lin, Wen-Wei and Chen, Kuan-Yu and Chen, Da-Yi},
-  journal={IEEE Transactions on Geoscience and Remote Sensing},
-  year={2025}
-}
+  journal={IEEE Geoscience and Remote Sensing Letters}, 
+  title={RATE: A Retrieval-Augmented Transformer for Regional Earthquake Early Warning}, 
+  year={2025},
+  volume={22},
+  number={},
+  pages={1-5},
+  keywords={Earthquakes;Accuracy;Transformers;Training;Real-time systems;Adaptation models;Electronics packaging;Data models;Context modeling;Predictive models;Deep learning;earthquake early warning (EEW);regional warning systems;retrieval augmented (RA);seismic intensity prediction},
+  doi={10.1109/LGRS.2025.3598322}}
