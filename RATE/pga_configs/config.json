@@ -1,0 +1,106 @@
+{
+    "seed": 42,
+    "model_params": {
+        "mlp_dims": [
+            500,
+            500,
+            500
+        ],
+        "output_mlp_dims": [
+            150,
+            100,
+            50,
+            30,
+            10
+        ],
+        "wavelength": [
+            [
+                0.01,
+                15
+            ],
+            [
+                0.01,
+                15
+            ],
+            [
+                0.01,
+                10
+            ]
+        ],
+        "mad_params": {
+            "n_heads": 10,
+            "att_dropout": 0.0,
+            "initializer_range": 0.02
+        },
+        "ffn_params": {
+            "hidden_dim": 1000
+        },
+        "trace_length": 3000,
+        "downsample": 5,
+        "rotation": null,
+        "alternative_coords_embedding": false, 
+        "transformer_layers": 6,
+        "hidden_dropout": 0.0,
+        "current_station": 707,
+        "historical_station": 707,
+        "pga_mixture": 5,
+        "borehole": true,
+        "rotation_anchor": [
+            35,
+            0
+        ]
+    },
+    "training_params": {
+        "transfer_model_path": "from_pretrain/checkpoint_45.pth",
+        "device": 0,
+        "lr": 1e-05,
+        "weighted_loss": {
+            "threshold":  [
+                -1.00833099,
+                -0.707301,
+                -0.30936099,
+                -0.00833099,
+                0.292699
+            ],
+            "weight": [1, 4, 4, 4, 4, 4]
+        },
+        "clipnorm": 1.0,
+        "epochs_single_station": 25,
+        "epochs_full_model": 50,
+        "filter_single_station_by_pick": true,
+        "station_json_file": "dataset_configs/example_stations.json",
+        "first_station_appearance": "dataset_configs/example_station_first_appearance_time.json",
+        "last_station_appearance": "dataset_configs/example_station_last_appearance_time.json",
+        "train_val_boundary": 8107,
+        "val_test_boundary": 9458,
+        "total_data_path": [
+            "/mnt/nas1/william/Dataset/japan/japan.hdf5"
+        ],
+        "train_data_path": [
+            "/mnt/nas1/william/Dataset/japan/train_japan.hdf5"
+        ],
+        "val_data_path": [
+            "/mnt/nas1/william/Dataset/japan/val_japan.hdf5"
+        ],
+        "test_data_path": [
+            "/mnt/nas1/william/Dataset/japan/test_japan.hdf5"
+        ],
+        "workers": 15,
+        "weight_path": "20251215_14444_zero1_5_weight_fix",
+        "generator_params": [
+            {
+                "historical_database_path": "dataset_configs/example_RAG_time_PGA.npy",
+                "RAG_topK": 1,
+                "key": "M_J",
+                "batch_size": 5,
+                "peek_sample": 2500,
+                "min_upsample_magnitude": 5,
+                "magnitude_resampling": 1.5,
+                "pga_key": "pga",
+                "trigger_based": true,
+                "cutout_start": -1,
+                "cutout_end": 25
+            }
+        ]
+    }
+}
