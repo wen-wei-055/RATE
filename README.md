@@ -6,7 +6,7 @@ This repository is the official implementation of **RATE** (Retrieval-Augmented 
 
 ---
 
-## 📖 Methodology Overview
+## Methodology Overview
 
 **RATE** is the first framework to integrate a retrieval-augmented (RA) mechanism within a Transformer architecture for earthquake early warning (EEW). 
 
@@ -18,7 +18,7 @@ This repository is the official implementation of **RATE** (Retrieval-Augmented 
 
 ---
 
-## 🚀 Training Pipeline
+## Training Pipeline
 
 The training process follows a specific two-stage workflow to effectively integrate the retrieval-augmented mechanism.
 
@@ -33,7 +33,7 @@ The training process follows a specific two-stage workflow to effectively integr
 
 ---
 
-## 📊 Data Preparation & Setup
+## Data Preparation & Setup
 
 ### 1. Format Conversion & Splitting
 * **Conversion**: Use `japan.py` (for KiK-net) or appropriate scripts for CWASN to convert raw data into **HDF5** format.
@@ -49,14 +49,14 @@ The training process follows a specific two-stage workflow to effectively integr
 
 ---
 
-## ⚙️ Experimental Configuration
+## Experimental Configuration
 * **Input Duration**: 30 seconds (3,000 time steps at 100Hz).
 * **Optimization**: Adam optimizer with `ReduceLROnPlateau` scheduler.
 * **Efficiency**: Average retrieval time is approximately **0.000969 seconds** per query using FAISS, making it feasible for real-time deployment.
 
 ---
 
-## 📝 Citation
+## Citation
 
 If you use this code or research in your work, please cite:
 
