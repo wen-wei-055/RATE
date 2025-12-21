@@ -2,7 +2,7 @@
 
 This repository is the official implementation of **RATE** (Retrieval-Augmented Transformer for Earthquake), a framework designed to enhance real-time earthquake intensity prediction by leveraging historical seismic records.
 
-[![Paper: IEEE TGRS](https://img.shields.io/badge/Paper-IEEE%20TGRS-blue)](https://ieeexplore.ieee.org/document/11124201)
+[![Paper: IEEE GRSL](https://img.shields.io/badge/Paper-IEEE%20GRSL-blue)](https://ieeexplore.ieee.org/document/11124201)
 
 ---
 
