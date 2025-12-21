@@ -38,7 +38,7 @@
         "trace_length": 3000,
         "downsample": 5,
         "rotation": null,
-        "alternative_coords_embedding": false, 
+        "alternative_coords_embedding": false,
         "transformer_layers": 6,
         "hidden_dropout": 0.0,
         "current_station": 707,
@@ -54,8 +54,21 @@
         "device": 0,
         "lr": 1e-05,
         "weighted_loss": {
-            "threshold": [-1.00833099, -0.707301, -0.30936099, -0.00833099, 0.292699],
-            "weight": [1, 4, 4, 4, 4, 4]
+            "threshold": [
+                -1.00833099,
+                -0.707301,
+                -0.30936099,
+                -0.00833099,
+                0.292699
+            ],
+            "weight": [
+                1,
+                4,
+                4,
+                4,
+                4,
+                4
+            ]
         },
         "clipnorm": 1.0,
         "epochs_single_station": 25,
@@ -67,13 +80,13 @@
         "first_station_appearance": "dataset_configs/example_station_first_appearance_time.json",
         "last_station_appearance": "dataset_configs/example_station_last_appearance_time.json",
         "train_data_path": [
-            "/mnt/nas1/william/Dataset/japan/train_japan.hdf5"
+            "Dataset/japan/train_japan.hdf5"
         ],
         "val_data_path": [
-            "/mnt/nas1/william/Dataset/japan/val_japan.hdf5"
+            "Dataset/japan/val_japan.hdf5"
         ],
         "test_data_path": [
-            "/mnt/nas1/william/Dataset/japan/test_japan.hdf5"
+            "Dataset/japan/test_japan.hdf5"
         ],
         "workers": 15,
         "weight_path": "weight_path",
