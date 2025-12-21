@@ -308,7 +308,6 @@ if __name__ == '__main__':
     with open(os.path.join(training_params['weight_path'], 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
 
-    # full_model = models.build_transformer_model(**config['model_params'], device=device, trace_length=3000).to(device)
     full_model = FullModel(**config['model_params'], device=device).to(device)
 
     if 'transfer_model_path' in training_params:

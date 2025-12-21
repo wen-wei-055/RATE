@@ -76,7 +76,6 @@ def calculate_warning_times(config,
                                                  event_metadata=event_metadata_tmp,
                                                  coords_target=True,
                                                  cutout=(0, 3000),
-                                                #  pga_targets=n_pga_targets,
                                                  current_station=max_stations,
                                                  sampling_rate=sampling_rate,
                                                  select_first=True,
@@ -93,7 +92,7 @@ def calculate_warning_times(config,
         if use_multiprocessing:
             workers = 0
             
-        prediction, unuse_list = model_list.predict_generator(cutout_generator, workers=0, use_multiprocessing=False)  # (時間, (trace(超過20測站的trace會有>1個trace), 20, 50, 3))
+        prediction, unuse_list = model_list.predict_generator(cutout_generator, workers=0, use_multiprocessing=False) 
     
         prediction = prediction.reshape((len(times), -1) + prediction.shape[2:])
         
@@ -116,7 +115,7 @@ def calculate_warning_times(config,
         pga_times_pre -= 1
         pga_times_pred = np.zeros_like(pga_times_pre, dtype=float)
         pga_times_pred[pga_times_pre == -1] = np.nan
-        pga_times_pred[pga_times_pre > -1] = times[pga_times_pre[pga_times_pre > -1]]  # 每0.2秒進入模型一次，如果有超過pga閾值就放入pga_times_pred
+        pga_times_pred[pga_times_pre > -1] = times[pga_times_pre[pga_times_pre > -1]] 
 
         g_event = g_data[str(event[event_key])]
         pga_times_true_pre = g_event['pga_times'][()]
@@ -132,7 +131,7 @@ def calculate_warning_times(config,
             pga_times_true[position] = pga_times_true_pre[station_index]
         
         pga_times_true[pga_times_true == 0] = np.nan
-        pga_times_true[pga_times_true != 0] = (pga_times_true[pga_times_true != 0]) / sampling_rate - time_before  #在座資料集的時候有 + time_before
+        pga_times_true[pga_times_true != 0] = (pga_times_true[pga_times_true != 0]) / sampling_rate - time_before 
         
         coords = (np.array([[float(x) for x in row] for row in [x.split(',')[:-1] for x in stations_table]]))
         dist = np.zeros(coords.shape[0])
@@ -222,7 +221,6 @@ if __name__ == '__main__':
     min_mag = generator_params.get('min_mag', None)
     mag_key = generator_params.get('key', 'MA')
     event_metadata, data, metadata = loader.load_events(data_path,
-                                                        # limit=10,
                                                         station_len=len(stations_table),
                                                         custom_split=custom_split,
                                                         min_mag=min_mag,
@@ -267,7 +265,7 @@ if __name__ == '__main__':
     with open(os.path.join(output_dir, 'stats.json'), 'w') as stats_file:
         json.dump(results, stats_file, indent=4)
 
-    times_pga = np.arange(args.blind_time, 25, 0.8)
+    times_pga = np.arange(args.blind_time, 25, 0.2)
     alpha = [float(x) for x in args.alpha.split(',')]
     warning_time_information = calculate_warning_times(config, 
                                                         model_list, 

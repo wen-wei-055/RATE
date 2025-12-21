@@ -3,13 +3,10 @@ import os
 import numpy as np
 import json
 import pickle
-# import sklearn.metrics as metrics
-# import matplotlib.pyplot as plt
 import seaborn as sns
 from geopy.distance import geodesic
 import h5py
 from scipy.stats import norm
-import json
 from tqdm import tqdm
 import pandas as pd
 import torch
@@ -123,7 +120,7 @@ def calculate_warning_times(
         if use_multiprocessing:
             workers = 0
             
-        prediction, unuse_list, choose_event_list = model_list.predict_generator(cutout_generator, workers=0, use_multiprocessing=False)  # (時間, (trace(超過20測站的trace會有>1個trace), 20, 50, 3))
+        prediction, unuse_list, choose_event_list = model_list.predict_generator(cutout_generator, workers=0, use_multiprocessing=False) 
         total_choose_event_list.append(np.expand_dims(choose_event_list, 0))
         
         prediction = prediction.reshape((len(times), -1) + prediction.shape[2:])
@@ -148,7 +145,7 @@ def calculate_warning_times(
         pga_times_pre -= 1
         pga_times_pred = np.zeros_like(pga_times_pre, dtype=float)
         pga_times_pred[pga_times_pre == -1] = np.nan
-        pga_times_pred[pga_times_pre > -1] = times[pga_times_pre[pga_times_pre > -1]]  # 每0.2秒進入模型一次，如果有超過pga閾值就放入pga_times_pred
+        pga_times_pred[pga_times_pre > -1] = times[pga_times_pre[pga_times_pre > -1]] 
 
         g_event = g_data[str(event[event_key])]
         pga_times_true_pre = g_event['pga_times'][()]
@@ -162,7 +159,7 @@ def calculate_warning_times(
             position = stations_table[station_key] 
             pga_times_true[position] = pga_times_true_pre[station_index]
         pga_times_true[pga_times_true == 0] = np.nan
-        pga_times_true[pga_times_true != 0] = (pga_times_true[pga_times_true != 0]) / sampling_rate - time_before  #在座資料集的時候有 + time_before
+        pga_times_true[pga_times_true != 0] = (pga_times_true[pga_times_true != 0]) / sampling_rate - time_before 
         
         coords = (np.array([[float(x) for x in row] for row in [x.split(',')[:-1] for x in stations_table]]))
         dist = np.zeros(coords.shape[0])
@@ -171,7 +168,7 @@ def calculate_warning_times(
         dist = np.sqrt(dist ** 2 + coords_event[2] ** 2)
         full_predictions += [(pga_times_pred, pga_times_true, dist)]
 
-    total_choose_event_list = np.concatenate(total_choose_event_list, 0)  #(事件數, cutout總切分個數, top10)
+    total_choose_event_list = np.concatenate(total_choose_event_list, 0) 
     return full_predictions, total_choose_event_list
     
 def latlondep_ID(stations_table):
@@ -197,14 +194,10 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--val', action='store_true')  # Evaluate on val set
     parser.add_argument('--n_pga_targets', type=int)  # Overwrite number of PGA targets
-    parser.add_argument('--head_times', type=str, default=True)  # Evaluate warning times
     parser.add_argument('--blind_time', type=float, default=0.5)  # Time of first evaluation after first P arrival
-    parser.add_argument('--alpha', type=str, default='0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9')  # 機率大於alpha以上就會發布警報 Probability thresholds alpha
+    parser.add_argument('--alpha', type=str, default='0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9') 
     parser.add_argument('--additional_data', type=str)  # Additional data set to use for evaluation
     parser.add_argument('--dataset_id', type=int)  # ID of dataset to evaluate on, in case of joint training
-    parser.add_argument('--wait_file', type=str)  # Wait for this file to exist before starting evaluation
-    parser.add_argument('--ensemble_member', action='store_true')  # Task to evaluate is an ensemble member
-                                                                   # (not the full ensembel)
     parser.add_argument('--loss_limit', type=float) # In ensemble model, discard members with loss above this limit
     # A combination of tensorflow multiprocessing for generators and pandas dataframes causes the code to deadlock
     # sometimes. This flag provides a workaround.
@@ -261,7 +254,6 @@ if __name__ == '__main__':
     event_metadata, data, metadata = loader.load_events(
         data_path,
         stations_table,
-        # limit=10,
         custom_split=custom_split,
         min_mag=min_mag,
         mag_key=mag_key,

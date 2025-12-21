@@ -48,7 +48,7 @@ class TrainDevTestSplitter:
         return test_set
 
     @staticmethod
-    def train_set(event_metadata):#'2014', '2016', '2013', '2012', '2015', '2017'
+    def train_set(event_metadata):
         tset = np.array([x[:4] in ['2012','2013','2014','2015','2016','2017'] for x in event_metadata['source_origin_time']])
         return tset
 

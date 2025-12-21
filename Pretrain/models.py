@@ -321,9 +321,9 @@ class TotalEmbedding(nn.Module):
         self.Station_emb = PositionEmbedding(wavelength=wavelength, emb_dim=mlp_dims[-1], borehole=borehole, rotation=rotation, rotation_anchor=rotation_anchor, device=device)
         self.WaveformsEmbedding = WaveformsEmbedding(input_shape=input_shape, downsample=downsample, mlp_dims=mlp_dims)
 
-    def forward(self, waveforms, coords, unuse_list, stations_channel_class): #(64, 25, 3000, 6)
-        waveforms_mask = torch.unsqueeze(torch.any(torch.any(torch.not_equal(waveforms, 0),-1),-1),-1).to(self.device) #1->1, 0->0
-        coords_mask = torch.unsqueeze(torch.any(torch.not_equal(coords,0),-1),-1).to(self.device) #1->1, 0->0
+    def forward(self, waveforms, coords, unuse_list, stations_channel_class): 
+        waveforms_mask = torch.unsqueeze(torch.any(torch.any(torch.not_equal(waveforms, 0),-1),-1),-1).to(self.device) 
+        coords_mask = torch.unsqueeze(torch.any(torch.not_equal(coords,0),-1),-1).to(self.device) 
 
         waveforms = self.WaveformsEmbedding(waveforms, waveforms_mask)
         coords = self.Station_emb(coords)

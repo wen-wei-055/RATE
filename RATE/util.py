@@ -511,7 +511,7 @@ class EvalGenerator(Dataset):
 
             if self.trigger_based:
                 # Remove waveforms for all stations that did not trigger yet to avoid knowledge leakage
-                p_picks[p_picks <= 0] = org_waveform_length  # <=0的pick全部變成3000，因為等一下要由小排到大
+                p_picks[p_picks <= 0] = org_waveform_length
                 waveforms[cutout < p_picks, :, :] = 0
 
             if ii==0:

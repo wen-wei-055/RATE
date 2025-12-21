@@ -236,21 +236,6 @@ class PreloadedEventGenerator(Dataset):
                 reassigned_pga = g_event['pga'][()]
                 total_pga_dic.append(reassigned_pga)
                 
-        # with open(f"tmp/{self.tag}_event_metadata.pkl", "wb") as f:
-        #     pickle.dump(event_metadata, f)
-        # with open(f"tmp/{self.tag}_unuse_table.pkl", "wb") as f:
-        #     pickle.dump(unuse_table, f)
-        # with open(f"tmp/{self.tag}_total_pga_dic.pkl", "wb") as f:
-        #     pickle.dump(total_pga_dic, f)
-        
-        # with open(f"tmp/{self.tag}_event_metadata.pkl", "rb") as f:
-        #     event_metadata = pickle.load(f)
-        # with open(f"tmp/{self.tag}_unuse_table.pkl", "rb") as f:
-        #     unuse_table = pickle.load(f)
-        # with open(f"tmp/{self.tag}_total_pga_dic.pkl", "rb") as f:
-        #     total_pga_dic = pickle.load(f)
-
-
         return event_metadata, unuse_table, total_pga_dic
     
     def station_unuse_table(self, first_station_appearance, last_station_appearance, event_time):
