@@ -24,7 +24,7 @@ The training process follows a specific two-stage workflow to effectively integr
 
 ### Stage 1: Pre-training (Base Model)
 * **Action**: Modify the parameters in `config.json` to define the model architecture and training hyperparameters.
-* **Goal**: Establish foundational weights for the CNN and Transformer modules using large-scale datasets from Japan (KiK-net) or Taiwan (CWASN).
+* **Goal**: Establish foundational weights for the CNN and Transformer modules using large-scale datasets.
 
 ### Stage 2: Retrieval Augmentation Training
 * **Action**: Link the Stage 1 output by setting the `transfer_model_path` in your configuration.
@@ -41,13 +41,11 @@ Our data preprocessing pipeline follows the standards established by the **TEAM*
 * **Data Splitting**: Partition the dataset into **train**, **val**, and **test** sets (e.g., using a 60:10:30 ratio) following the same protocols for fair comparison.
 
 ### 2. Metadata & Database Initialization
-* **Generate `station.json`**: Define station coordinates and IDs used for positional encoding.
-* **Generate Historical Database**: Execute `preprocess.gen_historical_database` to compile the database $\Phi$ required for the retrieval stage.
+* **Generate `station.json`**: Define station coordinates and IDs used for positional embedding.
+* **Generate Historical Database**: Execute `preprocess.gen_historical_database` to compile the database required for the retrieval stage.
 
 ### 3. Station Temporal Constraints
-* **Generate `appearance_time`**: Records the operational windows of stations to ensure training data cleanliness.
-* > **Warning (Information Leakage):** This file is for **Training** purposes. Avoid including these constraints during the **Evaluation** phase unless station status is explicitly known, to prevent unrealistic performance gains via information leakage.
-
+* **Generate `appearance_time`**: Records the **activation (start) time** and **deactivation (end) time** of each station within the dataset.
 ---
 
 ## Experimental Configuration
