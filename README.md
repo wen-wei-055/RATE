@@ -1,6 +1,6 @@
 # RATE: A Retrieval-Augmented Transformer for Regional Earthquake Early Warning
 
-This repository is the official implementation of **RATE** (Retrieval-Augmented Transformer for Earthquake), a framework designed to enhance real-time earthquake intensity prediction by leveraging historical seismic records.
+This repository is the official implementation of **RATE** (Retrieval-Augmented Transformer for Earthquake), a framework designed to enhance real-time earthquake intensity prediction by leveraging historical seismic records. Published in *IEEE Geoscience and Remote Sensing Letters*, vol. 22, pp. 1–5, 2025.
 
 [![Paper: IEEE GRSL](https://img.shields.io/badge/Paper-IEEE%20GRSL-blue)](https://ieeexplore.ieee.org/document/11124201)
 
