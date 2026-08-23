@@ -19,7 +19,8 @@
         "initializer_range": 0.02,
         "ffn_hidden_dim": 1000,
         "pga_mixture": 5,
-        "tie_qkv": true
+        "legacy_shared_qkv": true,
+        "legacy_station_mask": true
     },
     "data": {
         "data_path": "Dataset/japan/japan.hdf5",
@@ -54,6 +55,10 @@
         "torch_threads": 6,
         "lr_factor": 0.8,
         "lr_patience": 5,
+        "legacy": {
+            "validation_over_all_stations": false,
+            "skip_nan_validation_batches": true
+        },
         "keep_all_until": 50
     }
 }

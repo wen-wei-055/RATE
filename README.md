@@ -119,21 +119,35 @@ Notable settings:
 * `data.retrieval.peek_seconds` — how far past that cutout the *retrieved* event may be revealed.
 * `data.station_blinding` — drop a random subset of stations per batch, as augmentation.
 * `data.trigger_based` — hide stations that have not triggered yet, so no future leaks in.
-* `model.tie_qkv`, `data.retrieval.exclude_self`, `data.adjust_mean` — see below.
+* `model.legacy_*`, `training.legacy.*`, `data.retrieval.exclude_self`, `data.adjust_mean` — see
+  below.
 
 ## Reproducing the published models
 
-The shipped configs describe the published runs, including three behaviours worth knowing about
-before changing anything. `NOTES.md` explains each in full; in short:
+The shipped configs reproduce the published runs exactly: given the same archive and seed, this
+code writes the same weights, the same optimiser state and the same losses as the code it
+replaces, verified by running both. Existing checkpoints load and evaluate unchanged.
 
-* `model.tie_qkv: true` — in the published models the query, key and value projections are one
-  shared matrix. Existing checkpoints load and evaluate identically; set it to `false` for
-  standard attention, which requires retraining.
+That is what the `legacy` switches are for. Each one preserves a behaviour that turned out to be
+a defect, rather than fixing it silently. `NOTES.md` explains each in full; in short:
+
+* `model.legacy_shared_qkv: true` — the query, key and value projections are three parameters
+  over one buffer, so they are equal for the whole run. `false` gives standard attention.
+* `model.legacy_station_mask: true` (stage 1 only) — the attention and feed-forward outputs are
+  multiplied by the station service mask and passed through `abs`.
+* `training.legacy.validation_over_all_stations` — stage 2 averaged its validation loss over
+  out-of-service stations too, and that number drove the scheduler; stage 1 did not.
+* `training.legacy.skip_nan_validation_batches` — stage 1 dropped NaN validation batches;
+  stage 2 let them through.
 * `data.retrieval.exclude_self: false` — the retrieval pool is the training split, so during
-  stage 2 training each event retrieves *itself*. Set it to `true` to retrieve a genuinely
-  different event, which requires retraining.
-* `data.adjust_mean` — stage 1 removed the mean of the observed part of each trace and stage 2
-  did not. The configs preserve that; making them agree requires retraining.
+  stage 2 training each event retrieves *itself*.
+* `data.adjust_mean` — stage 1 removed the mean of the observed part of each trace, stage 2 did
+  not, and stage 2 freezes the embedding stage 1 trained.
+
+Turning any of them off is a research decision that means retraining. Evaluation has one of its
+own: `--ignore-station-windows` reproduces a run of the old `evaluate.py` that was not given
+`--first_station_appearance_path` / `--last_station_appearance_path`, which was the documented
+way to call it.
 
 ## Citation
 

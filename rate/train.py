@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from scipy.stats import norm
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -54,8 +55,6 @@ class ExceedanceMatrix:
         self.counts = np.zeros((len(thresholds) + 1, len(thresholds) + 1), dtype=np.int32)
 
     def accumulate(self, targets: np.ndarray, pred: np.ndarray) -> None:
-        from scipy.stats import norm
-
         observed = np.sum(targets.reshape(-1, 1) >= self.thresholds, axis=1)
         warned = np.zeros((pred.shape[0], len(self.thresholds)), dtype=int)
         for j, level in enumerate(self.thresholds):
@@ -114,10 +113,13 @@ def freeze(model: FullModel, names) -> list[torch.nn.Module]:
     return frozen
 
 
-def usable_rows(pred, targets, usable):
-    """Flatten a batch to one row per station, dropping stations out of service."""
-    pred = pred.contiguous().view(-1, pred.shape[-2], pred.shape[-1])
-    targets = targets.contiguous().view(-1)
+def flatten_stations(pred, targets):
+    """One row per station of the batch."""
+    return pred.contiguous().view(-1, pred.shape[-2], pred.shape[-1]), targets.contiguous().view(-1)
+
+
+def in_service(pred, targets, usable):
+    """Keep only the stations that were in operation for their event."""
     keep = torch.nonzero(usable.contiguous().view(-1) == 1, as_tuple=False).squeeze(dim=1)
     return pred[keep], targets[keep]
 
@@ -125,6 +127,7 @@ def usable_rows(pred, targets, usable):
 def run_epoch(model, batches, device, config, matrix, optimizer=None, frozen=(), description=""):
     """One pass over the data; training if an optimizer is given."""
     training = optimizer is not None
+    legacy = config.training.legacy
     model.train(training)
     for module in frozen:
         module.eval()
@@ -137,9 +140,15 @@ def run_epoch(model, batches, device, config, matrix, optimizer=None, frozen=(),
             targets, usable = targets.to(device), usable.to(device)
             targets[targets == 0] = PGA_FLOOR
 
-            pred = model.predict_current(waveforms, coords)
-            pred, targets = usable_rows(pred, targets, usable)
+            pred = model.predict_current(waveforms, coords, usable)
+            pred, targets = flatten_stations(pred, targets)
+            kept_pred, kept_targets = in_service(pred, targets, usable)
+            if training or not legacy.validation_over_all_stations:
+                pred, targets = kept_pred, kept_targets
             loss = pga_loss(targets, pred, config.training.weighted_loss)
+
+            if not training and legacy.skip_nan_validation_batches and torch.isnan(loss):
+                continue
 
             if training:
                 loss.backward()
@@ -150,7 +159,7 @@ def run_epoch(model, batches, device, config, matrix, optimizer=None, frozen=(),
             total += loss.item()
             loop.set_postfix(loss=loss.item())
             matrix.accumulate(
-                targets.detach().cpu().numpy(), pred.detach().cpu().numpy()
+                kept_targets.detach().cpu().numpy(), kept_pred.detach().cpu().numpy()
             )
     return total / max(len(loop), 1)
 

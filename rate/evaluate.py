@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 from .config import Config
 from .data import EvalDataset
-from .events import EventStore, detect_location_keys
+from .events import EventCache, EventStore, detect_location_keys
 from .model import FullModel
 from .retrieval import RetrievalIndex
 from .stations import StationAvailability, StationGrid, load_time_table
@@ -48,8 +48,9 @@ def predict_cutouts(model: FullModel, dataset: EvalDataset, device):
     predictions, neighbours = [], []
     for i in range(len(dataset)):
         (waveforms, coords), (_, usable, retrieved) = dataset[i]
-        out = model.predict_current(waveforms.to(device), coords.to(device))[0]
-        out[usable[0].to(device) == 0] = 0
+        usable = usable.to(device)
+        out = model.predict_current(waveforms.to(device), coords.to(device), usable)[0]
+        out[usable[0] == 0] = 0
         predictions.append(out.cpu().numpy())
         neighbours.append(retrieved)
 
@@ -83,10 +84,11 @@ def first_warning_times(predictions: np.ndarray, times: np.ndarray, thresholds, 
     return seconds
 
 
-def true_exceedance_times(store: EventStore, handle, grid: StationGrid, index: int, n_thresholds: int):
+def true_exceedance_times(store: EventStore, handle, cache, grid: StationGrid, index: int,
+                          n_thresholds: int):
     """When each station actually exceeded each threshold, in seconds."""
     times = np.zeros((len(grid), n_thresholds), dtype=float)
-    times[grid.rows_of(store.read(handle, index).coords)] = store.pga_times(handle, index)
+    times[grid.rows_of(cache.read(index).coords)] = store.pga_times(handle, index)
     times[times == 0] = np.nan
     return times / store.sampling_rate - store.time_before
 
@@ -107,6 +109,12 @@ def main(argv=None) -> None:
     parser.add_argument("--time-step", type=float, default=0.2)
     parser.add_argument("--alpha", type=str, default="0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9")
     parser.add_argument("--torch-threads", type=int, default=5)
+    parser.add_argument(
+        "--ignore-station-windows",
+        action="store_true",
+        help="treat every station as in service, as the old evaluate.py did unless it was "
+             "given --first_station_appearance_path / --last_station_appearance_path",
+    )
     args = parser.parse_args(argv)
 
     experiment_path = Path(args.experiment_path)
@@ -120,11 +128,13 @@ def main(argv=None) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     grid = StationGrid.load(config.data.station_json)
-    availability = StationAvailability(
-        grid,
-        load_time_table(config.data.first_station_appearance),
-        load_time_table(config.data.last_station_appearance),
-    )
+    windows = (None, None)
+    if not args.ignore_station_windows:
+        windows = (
+            load_time_table(config.data.first_station_appearance),
+            load_time_table(config.data.last_station_appearance),
+        )
+    availability = StationAvailability(grid, *windows)
     store = EventStore(config.data.data_path, config.data.event_key, config.model.trace_length)
     if store.time_before != config.data.noise_seconds:
         print(
@@ -141,10 +151,10 @@ def main(argv=None) -> None:
 
     results, retrieved_per_event = [], []
     with store.open() as handle:
+        cache = EventCache(store, handle)
         for index in tqdm(events, desc=f"{split} events"):
             dataset = EvalDataset(
-                store=store,
-                handle=handle,
+                events=cache,
                 event_index=index,
                 times=times,
                 config=config.data,
@@ -156,7 +166,7 @@ def main(argv=None) -> None:
             retrieved_per_event.append(neighbours)
 
             predicted = first_warning_times(predictions, times, store.pga_thresholds, alpha)
-            actual = true_exceedance_times(store, handle, grid, index, len(store.pga_thresholds))
+            actual = true_exceedance_times(store, handle, cache, grid, index, len(store.pga_thresholds))
             epicentre = store.metadata.iloc[index][coord_keys].values.astype(float)
             results.append((predicted, actual, hypocentral_distances(grid, epicentre)))
 

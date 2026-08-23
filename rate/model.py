@@ -151,7 +151,8 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         m = x.mean(-1, keepdims=True)
         s = torch.mean(torch.square(x - m), dim=-1, keepdims=True)
-        return self.gamma * (x - m) / torch.sqrt(s + self.eps) + self.beta
+        z = (x - m) / torch.sqrt(s + self.eps)
+        return self.gamma * z + self.beta
 
 
 class PositionEmbedding(nn.Module):
@@ -279,7 +280,7 @@ class TotalEmbedding(nn.Module):
 
 class MultiHeadSelfAttention(nn.Module):
     def __init__(self, total_station, n_heads, mlp_dims, att_dropout, initializer_range,
-                 tie_qkv=False, infinity=1e6):
+                 legacy_shared_qkv=False, infinity=1e6):
         super().__init__()
         self.n_heads = n_heads
         self.infinity = infinity
@@ -295,10 +296,15 @@ class MultiHeadSelfAttention(nn.Module):
 
         projection = (self.d_model, self.d_key * n_heads)
         self.WQ = nn.Parameter(uniform(projection))
-        if tie_qkv:
-            # Published behaviour: queries, keys and values share one weight
-            # matrix.  See README, "Known deviations".
-            self.WK = self.WV = self.WQ
+        if legacy_shared_qkv:
+            # The published models wrapped one buffer in three parameters.
+            # nn.Parameter does not copy, so the three names address the same
+            # memory: they start equal, and every in-place optimiser update
+            # writes through all of them, so they stay equal.  Reproduced
+            # exactly - three parameters, three gradients, one buffer - because
+            # the training dynamics depend on it.  See NOTES.md.
+            self.WK = nn.Parameter(self.WQ.detach())
+            self.WV = nn.Parameter(self.WQ.detach())
         else:
             self.WK = nn.Parameter(uniform(projection))
             self.WV = nn.Parameter(uniform(projection))
@@ -309,7 +315,7 @@ class MultiHeadSelfAttention(nn.Module):
         projected = torch.reshape(projected, (-1, self.stations, self.d_key, self.n_heads))
         return projected.permute((0, 3, 1, 2))
 
-    def forward(self, x, recording):
+    def forward(self, x, recording, station_mask=None):
         q = self._heads(x, self.WQ)
         k = self._heads(x, self.WK).permute((0, 1, 3, 2))
         v = self._heads(x, self.WV)
@@ -322,7 +328,10 @@ class MultiHeadSelfAttention(nn.Module):
 
         o = torch.matmul(score, v).permute((0, 2, 1, 3))
         o = torch.reshape(o, (-1, self.stations, self.n_heads * self.d_key))
-        return torch.matmul(o, self.WO)
+        o = torch.matmul(o, self.WO)
+        if station_mask is not None:
+            o = torch.abs(o * station_mask)   # legacy_station_mask; see NOTES.md
+        return o
 
 
 class PointwiseFeedForward(nn.Module):
@@ -333,18 +342,22 @@ class PointwiseFeedForward(nn.Module):
         self.bias1 = nn.Parameter(torch.zeros(hidden_dim))
         self.bias2 = nn.Parameter(torch.zeros(emb_dim))
 
-    def forward(self, x):
+    def forward(self, x, station_mask=None):
         x = F.gelu(torch.matmul(x, self.kernel1) + self.bias1)
-        return torch.matmul(x, self.kernel2) + self.bias2
+        x = torch.matmul(x, self.kernel2) + self.bias2
+        if station_mask is not None:
+            x = x * station_mask              # legacy_station_mask; see NOTES.md
+        return x
 
 
 class TransformerLayer(nn.Module):
     def __init__(self, total_station, mlp_dims, n_heads, attention_dropout, initializer_range,
-                 ffn_hidden_dim, hidden_dropout, tie_qkv):
+                 ffn_hidden_dim, hidden_dropout, legacy_shared_qkv):
         super().__init__()
         self.MultiHeadSelfAttention = MultiHeadSelfAttention(
             total_station=total_station, mlp_dims=mlp_dims, n_heads=n_heads,
-            att_dropout=attention_dropout, initializer_range=initializer_range, tie_qkv=tie_qkv,
+            att_dropout=attention_dropout, initializer_range=initializer_range,
+            legacy_shared_qkv=legacy_shared_qkv,
         )
         self.PointwiseFeedForward = PointwiseFeedForward(
             emb_dim=mlp_dims[-1], hidden_dim=ffn_hidden_dim
@@ -353,9 +366,10 @@ class TransformerLayer(nn.Module):
         self.LayerNorm2 = LayerNorm(input_shape=mlp_dims)
         self.dropout = nn.Dropout(hidden_dropout) if hidden_dropout > 0 else nn.Identity()
 
-    def forward(self, x, recording):
-        x = self.LayerNorm1(x + self.dropout(self.MultiHeadSelfAttention(x, recording)))
-        return self.LayerNorm2(x + self.dropout(self.PointwiseFeedForward(x)))
+    def forward(self, x, recording, station_mask=None):
+        attended = self.MultiHeadSelfAttention(x, recording, station_mask)
+        x = self.LayerNorm1(x + self.dropout(attended))
+        return self.LayerNorm2(x + self.dropout(self.PointwiseFeedForward(x, station_mask)))
 
 
 class Transformer(nn.Module):
@@ -364,9 +378,9 @@ class Transformer(nn.Module):
         prototype = TransformerLayer(**layer_params)
         self.layers = nn.ModuleList([copy.deepcopy(prototype) for _ in range(layers)])
 
-    def forward(self, x, recording):
+    def forward(self, x, recording, station_mask=None):
         for layer in self.layers:
-            x = layer(x, recording)
+            x = layer(x, recording, station_mask)
         return x
 
 
@@ -413,7 +427,7 @@ class FullModel(nn.Module):
             initializer_range=config.initializer_range,
             ffn_hidden_dim=config.ffn_hidden_dim,
             hidden_dropout=config.hidden_dropout,
-            tie_qkv=config.tie_qkv,
+            legacy_shared_qkv=config.legacy_shared_qkv,
         )
         self.To_GaussianDistribution = To_GaussianDistribution(
             emb_dim=config.mlp_dims[-1],
@@ -421,11 +435,17 @@ class FullModel(nn.Module):
             pga_mixture=config.pga_mixture,
         )
 
-    def forward(self, waveforms, coords):
+    def forward(self, waveforms, coords, usable=None):
+        """``usable`` is only read when ``legacy_station_mask`` is on."""
+        station_mask = None
+        if self.config.legacy_station_mask:
+            if usable is None:
+                raise ValueError("legacy_station_mask needs the station service mask")
+            station_mask = usable.unsqueeze(-1)
         x, recording = self.TotalEmbedding(waveforms, coords)
-        x = self.Transformer(x, recording)
+        x = self.Transformer(x, recording, station_mask)
         return self.To_GaussianDistribution(x)
 
-    def predict_current(self, waveforms, coords):
+    def predict_current(self, waveforms, coords, usable=None):
         """Predictions for the current event only, dropping retrieved slots."""
-        return self(waveforms, coords)[:, : self.config.stations]
+        return self(waveforms, coords, usable)[:, : self.config.stations]

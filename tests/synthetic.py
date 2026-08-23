@@ -18,7 +18,7 @@ N_EVENTS = 12
 TRACE_LENGTH = 600
 SAMPLING_RATE = 100
 CHANNELS = 6
-THRESHOLDS = [0.01, 0.05]
+THRESHOLDS = [0.01, 0.02, 0.05, 0.1, 0.2]
 TIME_BEFORE = 2
 
 
@@ -65,6 +65,8 @@ def write(directory: Path, seed: int = 0) -> dict[str, Path]:
             event.create_dataset("coords", data=coords[recording])
             event.create_dataset("p_picks", data=picks)
             event.create_dataset("pga", data=rng.uniform(-2.0, 0.5, n))
+            # Not read by this code; the archives carry it, so the fixture does.
+            event.create_dataset("pgv", data=rng.uniform(-3.0, 0.0, n))
             event.create_dataset(
                 "pga_times", data=rng.integers(250, 500, (n, len(THRESHOLDS)))
             )
@@ -95,7 +97,7 @@ def configs(directory: Path, paths: dict[str, Path]) -> dict[str, Path]:
         "n_heads": 2,
         "ffn_hidden_dim": 20,
         "pga_mixture": 2,
-        "tie_qkv": True,
+        "legacy_shared_qkv": True,
     }
     data = {
         "data_path": str(paths["data"]),

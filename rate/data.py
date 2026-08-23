@@ -23,7 +23,7 @@ import torch
 from torch.utils.data import Dataset
 
 from .config import DataConfig
-from .events import Event, EventStore
+from .events import Event, EventCache, EventStore
 from .retrieval import RetrievalIndex
 from .stations import StationAvailability, StationGrid
 
@@ -217,8 +217,7 @@ class EvalDataset(Dataset):
 
     def __init__(
         self,
-        store: EventStore,
-        handle,
+        events: EventCache,
         event_index: int,
         times,
         config: DataConfig,
@@ -227,8 +226,7 @@ class EvalDataset(Dataset):
         retrieval: RetrievalIndex | None = None,
         neighbours_recorded: int = 10,
     ):
-        self.store = store
-        self.handle = handle
+        self.events = events
         self.event_index = event_index
         self.times = times
         self.config = config
@@ -251,12 +249,11 @@ class EvalDataset(Dataset):
             step = self.retrieval.time_step(cutout, config.sampling_rate)
             neighbours = self.retrieval.neighbours(self.event_index, step, self.neighbours_recorded)
             if neighbours[0] >= 0:
-                retrieved = align_retrieved(self.store.read(self.handle, neighbours[0]))
+                retrieved = align_retrieved(self.events.read(neighbours[0]))
 
         batch = _GridBatch(1, self.grid, config, self.retrieved)
         batch.usable[0] = self.usable
-        current = self.store.read(self.handle, self.event_index)
-        batch.fill_block(0, [current], cutout, cutout, blind=False)
+        batch.fill_block(0, [self.events.read(self.event_index)], cutout, cutout, blind=False)
         if self.retrieval is not None:
             batch.fill_block(1, [retrieved], cutout, cutout + config.peek_samples, blind=False)
         inputs, (pga, usable) = batch.as_tensors()

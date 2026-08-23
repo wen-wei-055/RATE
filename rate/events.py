@@ -124,3 +124,25 @@ class EventStore:
         if start >= stop:
             raise ValueError(f"split {name!r} is empty (rows {start}:{stop} of {len(self)})")
         return range(start, stop)
+
+
+class EventCache:
+    """Recently read events, kept decoded.
+
+    Evaluation re-reads the same event at every cutout time, and neighbouring
+    events keep retrieving the same handful of historical ones, so a small
+    cache turns a few hundred reads per event into a few.
+    """
+
+    def __init__(self, store: "EventStore", handle: h5py.File, size: int = 32):
+        self.store = store
+        self.handle = handle
+        self.size = size
+        self.events: dict[int, Event] = {}
+
+    def read(self, index: int) -> Event:
+        if index not in self.events:
+            if len(self.events) >= self.size:
+                self.events.pop(next(iter(self.events)))
+            self.events[index] = self.store.read(self.handle, index)
+        return self.events[index]

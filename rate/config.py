@@ -46,10 +46,14 @@ class ModelConfig:
     initializer_range: float = 0.02
     ffn_hidden_dim: int = 1000
     pga_mixture: int = 5
-    #: The published models were trained with query/key/value weights sharing
-    #: one tensor (see README, "Known deviations").  Keep true to load or
-    #: reproduce those checkpoints, set false for standard attention.
-    tie_qkv: bool = True
+    #: Reproduce the published attention, in which the query, key and value
+    #: projections are three parameters over one buffer.  See NOTES.md; false
+    #: gives standard attention and requires retraining.
+    legacy_shared_qkv: bool = False
+    #: Reproduce the published stage 1, which multiplied the attention and
+    #: feed-forward outputs by the station service mask and took their absolute
+    #: value.  Only defined without retrieval.  See NOTES.md.
+    legacy_station_mask: bool = False
 
     @property
     def total_stations(self) -> int:
@@ -134,6 +138,23 @@ class DataConfig:
 
 
 @dataclass
+class LegacyTraining:
+    """Switches that exist only to reproduce the published runs exactly.
+
+    Each one is a defect that was found during the rewrite and left reachable
+    rather than silently fixed; see NOTES.md.  New work should leave them off.
+    """
+
+    #: Average the validation loss over every station, including those out of
+    #: service, whose target is the -1.5 floor.  Stage 2 did this; stage 1 did
+    #: not.  The value drives the scheduler and the checkpoint selection.
+    validation_over_all_stations: bool = False
+    #: Drop validation batches whose loss is NaN instead of letting it through.
+    #: Stage 1 did this; stage 2 did not.
+    skip_nan_validation_batches: bool = False
+
+
+@dataclass
 class WeightedLoss:
     """Per-intensity-band weighting of the mixture density loss."""
 
@@ -166,6 +187,7 @@ class TrainingConfig:
     #: Sub-modules to load-and-freeze, by attribute name on the model.
     freeze: tuple[str, ...] = ()
     weighted_loss: WeightedLoss = field(default_factory=WeightedLoss)
+    legacy: LegacyTraining = field(default_factory=LegacyTraining)
 
 
 @dataclass
@@ -186,10 +208,13 @@ class Config:
         weighted = WeightedLoss(
             **_check_keys(WeightedLoss, training_raw.pop("weighted_loss", {}), "config.training.weighted_loss")
         )
+        legacy = LegacyTraining(
+            **_check_keys(LegacyTraining, training_raw.pop("legacy", {}), "config.training.legacy")
+        )
         config = cls(
             model=ModelConfig(**_check_keys(ModelConfig, raw.pop("model"), "config.model")),
             data=DataConfig(retrieval=retrieval, **data_raw),
-            training=TrainingConfig(weighted_loss=weighted, **training_raw),
+            training=TrainingConfig(weighted_loss=weighted, legacy=legacy, **training_raw),
             **raw,
         )
         config.validate()
@@ -222,6 +247,11 @@ class Config:
             raise ValueError(
                 "model.retrieved_events and data.retrieval.database disagree: either "
                 "both describe retrieval or neither does"
+            )
+        if self.model.legacy_station_mask and self.model.retrieved_events:
+            raise ValueError(
+                "legacy_station_mask only exists for stage 1: the mask covers the current "
+                "stations, not the retrieved ones"
             )
         if not 0 < self.data.train_val_boundary <= self.data.val_test_boundary:
             raise ValueError("expected 0 < train_val_boundary <= val_test_boundary")
