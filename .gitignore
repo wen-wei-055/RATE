@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+weight_path/
+Dataset/
+*.hdf5
+*.pth

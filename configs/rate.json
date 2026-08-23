@@ -1,0 +1,72 @@
+{
+    "seed": 42,
+    "model": {
+        "stations": 707,
+        "retrieved_events": 1,
+        "trace_length": 3000,
+        "borehole": true,
+        "downsample": 5,
+        "mlp_dims": [500, 500, 500],
+        "output_mlp_dims": [150, 100, 50, 30, 10],
+        "wavelength": [[0.01, 15], [0.01, 15], [0.01, 10]],
+        "rotation": null,
+        "rotation_anchor": [35, 0],
+        "alternative_coords_embedding": false,
+        "transformer_layers": 6,
+        "n_heads": 10,
+        "attention_dropout": 0.0,
+        "hidden_dropout": 0.0,
+        "initializer_range": 0.02,
+        "ffn_hidden_dim": 1000,
+        "pga_mixture": 5,
+        "tie_qkv": true
+    },
+    "data": {
+        "data_path": "Dataset/japan/japan.hdf5",
+        "station_json": "dataset_configs/example_stations.json",
+        "first_station_appearance": "dataset_configs/example_station_first_appearance_time.json",
+        "last_station_appearance": "dataset_configs/example_station_last_appearance_time.json",
+        "train_val_boundary": 8107,
+        "val_test_boundary": 9458,
+        "event_key": "KiK_File",
+        "magnitude_key": "M_J",
+        "batch_size": 5,
+        "sampling_rate": 100,
+        "noise_seconds": 5,
+        "cutout_start": -1,
+        "cutout_end": 25,
+        "trigger_based": true,
+        "station_blinding": true,
+        "adjust_mean": false,
+        "integrate": false,
+        "magnitude_resampling": 1.5,
+        "min_upsample_magnitude": 5,
+        "upsample_high_station_events": null,
+        "oversample": 1,
+        "retrieval": {
+            "database": "dataset_configs/example_RAG_time_PGA.npy",
+            "topk": 1,
+            "peek_seconds": 25.0,
+            "exclude_self": false
+        }
+    },
+    "training": {
+        "weight_path": "weight_path/rate",
+        "epochs": 50,
+        "lr": 1e-05,
+        "clipnorm": 1.0,
+        "device": "cuda:0",
+        "workers": 15,
+        "torch_threads": 6,
+        "lr_factor": 0.8,
+        "lr_patience": 4,
+        "keep_all_until": 20,
+        "transfer_model_path": "weight_path/pretrain/checkpoint_45.pth",
+        "freeze": ["TotalEmbedding", "To_GaussianDistribution"],
+        "weighted_loss": {
+            "enabled": false,
+            "thresholds": [-1.00833099, -0.707301, -0.30936099, -0.00833099, 0.292699],
+            "weights": [1, 4, 4, 4, 4, 4]
+        }
+    }
+}

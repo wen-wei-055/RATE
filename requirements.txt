@@ -1,0 +1,10 @@
+torch>=2.0
+numpy
+pandas
+tables          # pandas HDF5 backend
+h5py
+faiss-cpu       # or faiss-gpu
+scipy
+tqdm
+obspy
+geopy
